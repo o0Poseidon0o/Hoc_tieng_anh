@@ -7,6 +7,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         :root {
@@ -48,7 +49,6 @@
             align-items: center;
         }
 
-        /* Giao diện nhập liệu */
         .setup-group {
             display: flex;
             gap: 10px;
@@ -82,14 +82,33 @@
             cursor: pointer;
             font-size: 16px;
             transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn-check { background: var(--secondary); color: white; width: 100%; margin-top: 15px; }
         .btn-pdf { background: var(--danger); color: white; width: 100%; margin-top: 15px; display: none; }
+        .btn-scan { background: #9b59b6; color: white; width: 100%; margin-bottom: 10px; }
 
-        /* Kết quả */
+        /* Camera UI Overlay */
+        #cam-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        video { width: 90%; max-width: 600px; border-radius: 10px; }
+        .cam-btns { margin-top: 20px; display: flex; gap: 10px; }
+
+        #ocr-status { display: none; text-align: center; color: var(--secondary); font-weight: bold; padding: 10px; }
+
         #result-area { display: none; margin-top: 30px; }
-        
         .score-summary {
             text-align: center;
             padding: 25px;
@@ -98,18 +117,14 @@
             border: 3px solid #eee;
             margin-bottom: 25px;
         }
-
         .score-val { font-size: 45px; font-weight: 900; display: block; }
-
         .card-analysis {
             background: #fff;
             border: 1px solid #eee;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
-
         .tag {
             display: inline-block;
             padding: 4px 10px;
@@ -119,24 +134,18 @@
             text-transform: uppercase;
             margin-bottom: 10px;
         }
-
         .tag-tense { background: #e3f2fd; color: #1565c0; }
         .tag-grammar { background: #f3e5f5; color: #7b1fa2; }
         .tag-spelling { background: #ffebee; color: #c62828; }
         .tag-word { background: #e8f5e9; color: #2e7d32; }
-
         .text-diff { margin: 10px 0; font-size: 16px; }
         .original { color: #d32f2f; text-decoration: line-through; opacity: 0.8; }
         .fixed { color: #2e7d32; font-weight: bold; margin-top: 5px; }
-        
-        .explain-box { 
-            background: #fff9c4; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            color: #5d4037;
-            margin-top: 12px;
-            border-left: 4px solid var(--warning);
+        .explain-box { background: #fff9c4; padding: 12px; border-radius: 8px; font-size: 14px; color: #5d4037; margin-top: 12px; border-left: 4px solid var(--warning); }
+
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .setup-group { flex-direction: column; }
         }
     </style>
 </head>
@@ -157,7 +166,10 @@
             <button onclick="location.reload()" style="background:none; border:none; cursor:pointer; color:#666; font-size:12px;">Đổi thông tin 🔄</button>
         </div>
 
-        <textarea id="userInput" placeholder="Nhập bài viết của em vào đây. Hệ thống sẽ tự tách từng câu để chấm điểm chi tiết..."></textarea>
+        <button class="btn btn-scan" onclick="openCamera()">📷 MỞ CAMERA QUÉT BÀI</button>
+        <div id="ocr-status">⏳ Đang nhận diện chữ viết, vui lòng chờ...</div>
+
+        <textarea id="userInput" placeholder="Nhập bài viết hoặc sử dụng camera để quét..."></textarea>
         
         <button id="checkBtn" class="btn btn-check" onclick="analyzeText()">CHẤM BÀI & PHÂN TÍCH LỖI</button>
 
@@ -166,17 +178,24 @@
                 <span id="resScore" class="score-val"></span>
                 <span style="color:#666; font-weight:bold;">ĐIỂM TỔNG KẾT</span>
             </div>
-
             <div id="detailsList"></div>
-
             <button id="pdfBtn" class="btn btn-pdf" onclick="generatePDF()">📥 XUẤT BÁO CÁO HỌC TẬP (PDF)</button>
         </div>
     </div>
 </div>
 
+<div id="cam-overlay">
+    <video id="video" autoplay playsinline></video>
+    <div class="cam-btns">
+        <button class="btn" style="background:var(--danger); color:white;" onclick="closeCamera()">ĐÓNG</button>
+        <button class="btn" style="background:var(--primary); color:white;" onclick="captureImage()">CHỤP & QUÉT CHỮ</button>
+    </div>
+</div>
+<canvas id="canvas" style="display:none;"></canvas>
+
 <script>
-    // --- QUAN TRỌNG: DÁN API KEY CỦA BẠN VÀO ĐÂY ---
     const API_KEY = "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";
+    let videoStream = null;
 
     function startApp() {
         const name = document.getElementById('sName').value.trim();
@@ -188,6 +207,52 @@
         document.getElementById('main-app').style.display = 'block';
     }
 
+    // --- XỬ LÝ CAMERA & OCR ---
+    async function openCamera() {
+        const overlay = document.getElementById('cam-overlay');
+        const video = document.getElementById('video');
+        overlay.style.display = 'flex';
+        
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment" } // Ưu tiên camera sau
+            });
+            video.srcObject = videoStream;
+        } catch (err) {
+            alert("Lỗi camera: " + err.message);
+            overlay.style.display = 'none';
+        }
+    }
+
+    function closeCamera() {
+        if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+        document.getElementById('cam-overlay').style.display = 'none';
+    }
+
+    async function captureImage() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const status = document.getElementById('ocr-status');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        closeCamera();
+        status.style.display = 'block';
+
+        try {
+            // Nhận diện ngôn ngữ Tiếng Anh
+            const result = await Tesseract.recognize(canvas.toDataURL('image/png'), 'eng');
+            document.getElementById('userInput').value = result.data.text;
+        } catch (err) {
+            alert("Lỗi quét chữ: " + err.message);
+        } finally {
+            status.style.display = 'none';
+        }
+    }
+
+    // --- PHÂN TÍCH AI ---
     async function analyzeText() {
         const text = document.getElementById('userInput').value.trim();
         const btn = document.getElementById('checkBtn');
@@ -204,19 +269,7 @@
                     model: "llama-3.3-70b-versatile",
                     messages: [{
                         role: "system",
-                        content: `You are an AI English Tutor. Analyze the paragraph by breaking it into sentences.
-                        For each sentence, identify the SPECIFIC error type (Tense, Grammar, Spelling, or Word Choice).
-                        Return ONLY JSON: {
-                          "score": 1-10,
-                          "data": [
-                            {
-                              "tag": "Tense|Grammar|Spelling|Word Choice",
-                              "wrong": "original sentence",
-                              "right": "corrected sentence",
-                              "detail_vn": "Giải thích chi tiết tại sao sai và quy tắc cần nhớ bằng tiếng Việt"
-                            }
-                          ]
-                        }`
+                        content: `You are an AI English Tutor. Analyze the paragraph by breaking it into sentences. For each sentence, identify the SPECIFIC error type (Tense, Grammar, Spelling, or Word Choice). Return ONLY JSON: {"score": 1-10, "data": [{"tag": "Tense|Grammar|Spelling|Word Choice", "wrong": "...", "right": "...", "detail_vn": "..."}]}`
                     }, { role: "user", content: text }],
                     response_format: { type: "json_object" }
                 })
@@ -225,27 +278,21 @@
             const raw = await response.json();
             const result = JSON.parse(raw.choices[0].message.content);
 
-            // Hiển thị điểm
             const sDiv = document.getElementById('resScore');
             sDiv.innerText = `${result.score}/10`;
             sDiv.style.color = result.score >= 8 ? "#2ecc71" : (result.score >= 5 ? "#f39c12" : "#e74c3c");
 
-            // Hiển thị chi tiết
             const list = document.getElementById('detailsList');
             list.innerHTML = "";
             result.data.forEach(item => {
                 const tagClass = `tag-${item.tag.split(' ')[0].toLowerCase()}`;
-                const card = document.createElement('div');
-                card.className = "card-analysis";
-                card.innerHTML = `
-                    <span class="tag ${tagClass}">${item.tag}</span>
-                    <div class="text-diff original">❌ ${item.wrong}</div>
-                    <div class="text-diff fixed">✅ ${item.right}</div>
-                    <div class="explain-box">
-                        <b>📝 Lời khuyên:</b> ${item.detail_vn}
-                    </div>
-                `;
-                list.appendChild(card);
+                list.innerHTML += `
+                    <div class="card-analysis">
+                        <span class="tag ${tagClass}">${item.tag}</span>
+                        <div class="text-diff original">❌ ${item.wrong}</div>
+                        <div class="fixed">✅ ${item.right}</div>
+                        <div class="explain-box"><b>📝 Lời khuyên:</b> ${item.detail_vn}</div>
+                    </div>`;
             });
 
             document.getElementById('result-area').style.display = 'block';
@@ -253,7 +300,7 @@
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
         } catch (e) {
-            alert("Lỗi hệ thống AI. Vui lòng kiểm tra lại API Key.");
+            alert("Lỗi hệ thống AI.");
         } finally {
             btn.disabled = false;
             btn.innerText = "CHẤM BÀI & PHÂN TÍCH LỖI";
@@ -264,29 +311,13 @@
         const { jsPDF } = window.jspdf;
         const name = document.getElementById('sName').value;
         const resultDiv = document.getElementById('result-area');
-        
-        const pdfNode = resultDiv.cloneNode(true);
-        pdfNode.style.width = "750px";
-        pdfNode.style.padding = "30px";
-        pdfNode.style.background = "white";
-        document.body.appendChild(pdfNode);
-
-        try {
-            const canvas = await html2canvas(pdfNode, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const w = pdf.internal.pageSize.getWidth();
-            const h = (canvas.height * w) / canvas.width;
-
-            pdf.setFontSize(18);
-            pdf.text(`BAO CAO KET QUA: ${name.toUpperCase()}`, 15, 15);
-            pdf.addImage(imgData, 'PNG', 0, 20, w, h);
-            pdf.save(`Ket_Qua_Grammar_${name}.pdf`);
-        } finally {
-            document.body.removeChild(pdfNode);
-        }
+        const canvas = await html2canvas(resultDiv, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        pdf.text(`BAO CAO KET QUA: ${name.toUpperCase()}`, 15, 15);
+        pdf.addImage(imgData, 'PNG', 0, 20, 210, (canvas.height * 210) / canvas.width);
+        pdf.save(`Ket_Qua_${name}.pdf`);
     }
 </script>
 </body>
-
 </html>
