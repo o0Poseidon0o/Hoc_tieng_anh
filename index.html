@@ -3,149 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Grammar Master Pro - Phân Tích Chi Tiết</title>
+    <title>AI Grammar Master Pro - High Accuracy OCR</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
-        :root {
-            --primary: #2ecc71;
-            --secondary: #3498db;
-            --danger: #e74c3c;
-            --warning: #f1c40f;
-            --bg: #f8f9fa;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 850px;
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-
+        :root { --primary: #2ecc71; --secondary: #3498db; --danger: #e74c3c; --warning: #f1c40f; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 850px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: var(--primary); margin-bottom: 30px; }
-
-        .header-box {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border-left: 6px solid var(--primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .setup-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        input[type="text"] {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-        }
-
-        textarea {
-            width: 100%;
-            height: 200px;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            resize: none;
-            box-sizing: border-box;
-            line-height: 1.6;
-            outline: none;
-        }
-
-        .btn {
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-            transition: 0.3s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .btn:active { transform: scale(0.98); }
-
+        .header-box { background: #e8f5e9; padding: 15px; border-radius: 12px; margin-bottom: 25px; border-left: 6px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
+        .setup-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; }
+        textarea { width: 100%; height: 200px; padding: 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; resize: none; box-sizing: border-box; line-height: 1.6; outline: none; }
+        .btn { padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-check { background: var(--secondary); color: white; width: 100%; margin-top: 15px; }
         .btn-pdf { background: var(--danger); color: white; width: 100%; margin-top: 15px; display: none; }
         .btn-scan { background: #9b59b6; color: white; width: 100%; margin-bottom: 10px; }
 
-        /* Camera Overlay */
-        #cam-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.98);
-            z-index: 9999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #video { 
-            width: 90%; 
-            max-width: 600px; 
-            border: 2px solid white; 
-            border-radius: 10px; 
-            background: #000;
-        }
+        #cam-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+        #video { width: 100%; height: 75%; object-fit: contain; }
         .cam-btns { margin-top: 20px; display: flex; gap: 15px; width: 90%; max-width: 500px; }
 
-        #ocr-status { 
-            display: none; 
-            text-align: center; 
-            color: var(--secondary); 
-            font-weight: bold; 
-            padding: 15px; 
-            border: 2px dashed var(--secondary); 
-            border-radius: 10px; 
-            margin-bottom: 15px;
-            background: #eef7ff;
-        }
-
+        #ocr-status { display: none; text-align: center; color: var(--secondary); font-weight: bold; padding: 15px; border: 2px dashed var(--secondary); border-radius: 10px; margin-bottom: 15px; background: #eef7ff; }
         #result-area { display: none; margin-top: 30px; }
         .score-summary { text-align: center; padding: 25px; border-radius: 15px; background: #fff; border: 3px solid #eee; margin-bottom: 25px; }
         .score-val { font-size: 45px; font-weight: 900; display: block; }
         .card-analysis { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
-        .tag { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; }
-        .tag-tense { background: #e3f2fd; color: #1565c0; }
-        .tag-grammar { background: #f3e5f5; color: #7b1fa2; }
-        .tag-spelling { background: #ffebee; color: #c62828; }
-        .tag-word { background: #e8f5e9; color: #2e7d32; }
+        .tag { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; color:white; }
+        .tag-tense { background: #3498db; } .tag-grammar { background: #9b59b6; } .tag-spelling { background: #e74c3c; } .tag-word { background: #27ae60; }
         .text-diff { margin: 10px 0; font-size: 16px; }
         .original { color: #d32f2f; text-decoration: line-through; opacity: 0.8; }
         .fixed { color: #2e7d32; font-weight: bold; margin-top: 5px; }
         .explain-box { background: #fff9c4; padding: 12px; border-radius: 8px; font-size: 14px; color: #5d4037; margin-top: 12px; border-left: 4px solid var(--warning); }
-
-        @media (max-width: 600px) {
-            .container { padding: 15px; width: 95%; }
-            .setup-group { flex-direction: column; }
-            .btn { width: 100%; }
-        }
+        @media (max-width: 600px) { .container { padding: 15px; width: 95%; } .setup-group { flex-direction: column; } .btn { width: 100%; } }
     </style>
 </head>
 <body>
@@ -162,21 +55,14 @@
     <div id="main-app" style="display:none;">
         <div class="header-box">
             <span id="infoDisplay"></span>
-            <button onclick="location.reload()" style="background:none; border:none; cursor:pointer; color:#666; font-size:12px;">Đổi thông tin 🔄</button>
+            <button onclick="location.reload()" style="background:none; border:none; color:#666; font-size:12px; cursor:pointer;">Đổi thông tin 🔄</button>
         </div>
-
         <button class="btn btn-scan" onclick="openCamera()">📷 QUÉT BÀI VIẾT BẰNG CAMERA</button>
-        <div id="ocr-status">⚙️ Đang phân tích chữ viết chuyên sâu... vui lòng đợi vài giây...</div>
-
-        <textarea id="userInput" placeholder="Văn bản sau khi quét sẽ hiện ở đây hoặc bạn có thể tự nhập..."></textarea>
-        
+        <div id="ocr-status">⚡ Đang xử lý ảnh & Nhận diện chữ...</div>
+        <textarea id="userInput" placeholder="Văn bản quét được sẽ hiện ở đây..."></textarea>
         <button id="checkBtn" class="btn btn-check" onclick="analyzeText()">CHẤM BÀI & PHÂN TÍCH LỖI</button>
-
         <div id="result-area">
-            <div class="score-summary">
-                <span id="resScore" class="score-val"></span>
-                <span style="color:#666; font-weight:bold;">ĐIỂM TỔNG KẾT</span>
-            </div>
+            <div class="score-summary"><span id="resScore" class="score-val"></span><span style="color:#666; font-weight:bold;">ĐIỂM TỔNG KẾT</span></div>
             <div id="detailsList"></div>
             <button id="pdfBtn" class="btn btn-pdf" onclick="generatePDF()">📥 XUẤT BÁO CÁO HỌC TẬP (PDF)</button>
         </div>
@@ -206,41 +92,19 @@
     }
 
     async function openCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Trình duyệt không hỗ trợ Camera hoặc cần HTTPS.");
-            return;
-        }
-
         const overlay = document.getElementById('cam-overlay');
         const video = document.getElementById('video');
-        
         try {
-            // Tối ưu hóa cấu hình Camera: Độ phân giải cao + Tự động lấy nét
-            const constraints = {
-                video: {
-                    facingMode: "environment",
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    focusMode: "continuous"
-                },
-                audio: false 
-            };
-
+            const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
             videoStream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = videoStream;
             overlay.style.display = 'flex';
-            
-            // Ép video phát để kích hoạt lấy nét trên mobile
-            video.onloadedmetadata = () => video.play();
-
-        } catch (err) {
-            alert("Không thể lấy Camera. Hãy dùng Chrome/Safari và cấp quyền.");
-            overlay.style.display = 'none';
-        }
+            video.play();
+        } catch (err) { alert("Không thể mở Camera. Hãy dùng Chrome/Safari."); }
     }
 
     function closeCamera() {
-        if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+        if (videoStream) videoStream.getTracks().forEach(t => t.stop());
         document.getElementById('cam-overlay').style.display = 'none';
     }
 
@@ -250,40 +114,37 @@
         const status = document.getElementById('ocr-status');
         const ctx = canvas.getContext('2d');
         
-        // Chụp với kích thước tối đa của cảm biến camera
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // --- BỘ LỌC XỬ LÝ ẢNH TRƯỚC KHI QUÉT ---
+        ctx.filter = 'grayscale(100%) contrast(150%)'; // Chuyển sang trắng đen & tăng độ tương phản
+        ctx.drawImage(video, 0, 0);
         
         closeCamera();
         status.style.display = 'block';
 
         try {
-            // Sử dụng Tesseract với cấu hình ưu tiên độ chính xác
-            const result = await Tesseract.recognize(
-                canvas.toDataURL('image/jpeg', 0.95), 
-                'eng', 
-                { logger: m => console.log(m.status + ": " + Math.round(m.progress * 100) + "%") }
-            );
+            const worker = await Tesseract.createWorker('eng');
+            // Cấu hình CHỈ NHẬN DIỆN CHỮ CÁI VÀ DẤU CÂU (Whitelist)
+            await worker.setParameters({
+                tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?! \'\"-',
+            });
             
-            // Xử lý hậu kỳ văn bản để xóa các ký tự rác nhỏ
-            let rawText = result.data.text;
-            document.getElementById('userInput').value = rawText.trim();
+            const { data: { text } } = await worker.recognize(canvas.toDataURL('image/jpeg', 0.8));
+            await worker.terminate();
             
-            if(rawText.trim().length < 5) {
-                alert("Văn bản quét được quá ngắn. Hãy thử lại với ánh sáng tốt hơn và giữ chắc tay.");
-            }
-        } catch (err) {
-            alert("Lỗi quét: " + err.message);
-        } finally {
-            status.style.display = 'none';
-        }
+            // Xóa bớt các ký tự xuống dòng thừa
+            document.getElementById('userInput').value = text.replace(/\n\s*\n/g, '\n').trim();
+            
+        } catch (err) { alert("Lỗi: " + err.message); } 
+        finally { status.style.display = 'none'; }
     }
 
     async function analyzeText() {
         const text = document.getElementById('userInput').value.trim();
+        if(!text) return alert("Vui lòng nhập văn bản!");
         const btn = document.getElementById('checkBtn');
-        if(!text) return alert("Vui lòng nhập hoặc quét văn bản!");
         btn.disabled = true; btn.innerText = "⚡ ĐANG PHÂN TÍCH...";
 
         try {
@@ -301,30 +162,17 @@
             });
             const raw = await response.json();
             const result = JSON.parse(raw.choices[0].message.content);
-            
             document.getElementById('resScore').innerText = `${result.score}/10`;
-            document.getElementById('resScore').style.color = result.score >= 8 ? "#2ecc71" : (result.score >= 5 ? "#f39c12" : "#e74c3c");
-            
             const list = document.getElementById('detailsList');
             list.innerHTML = "";
             result.data.forEach(item => {
                 const tagClass = `tag-${item.tag.split(' ')[0].toLowerCase()}`;
-                list.innerHTML += `
-                    <div class="card-analysis">
-                        <span class="tag ${tagClass}">${item.tag}</span>
-                        <div class="text-diff original">❌ ${item.wrong}</div>
-                        <div class="fixed">✅ ${item.right}</div>
-                        <div class="explain-box"><b>📝 Giải thích:</b> ${item.detail_vn}</div>
-                    </div>`;
+                list.innerHTML += `<div class="card-analysis"><span class="tag ${tagClass}">${item.tag}</span><div class="text-diff original">❌ ${item.wrong}</div><div class="fixed">✅ ${item.right}</div><div class="explain-box"><b>📝 Giải thích:</b> ${item.detail_vn}</div></div>`;
             });
             document.getElementById('result-area').style.display = 'block';
             document.getElementById('pdfBtn').style.display = 'block';
-            window.scrollTo({ top: document.getElementById('result-area').offsetTop, behavior: 'smooth' });
-        } catch (e) { 
-            alert("Lỗi hệ thống AI. Thử lại sau."); 
-        } finally { 
-            btn.disabled = false; btn.innerText = "CHẤM BÀI & PHÂN TÍCH LỖI"; 
-        }
+        } catch (e) { alert("Lỗi hệ thống AI."); } 
+        finally { btn.disabled = false; btn.innerText = "CHẤM BÀI & PHÂN TÍCH LỖI"; }
     }
 
     async function generatePDF() {
@@ -334,13 +182,8 @@
         const canvas = await html2canvas(resultDiv, { scale: 2 });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const imgWidth = pageWidth - 20;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        pdf.setFontSize(16);
-        pdf.text(`REPORT: ${name.toUpperCase()}`, 10, 15);
-        pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
+        pdf.text(`REPORT: ${name.toUpperCase()}`, 15, 15);
+        pdf.addImage(imgData, 'PNG', 0, 20, 210, (canvas.height * 210) / canvas.width);
         pdf.save(`KetQua_${name}.pdf`);
     }
 </script>
